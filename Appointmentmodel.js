@@ -34,6 +34,13 @@ const appointmentSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    email: {
+        type: String,
+        required: true,
+        trim: true,
+        lowercase: true,
+        match: [/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/, 'Please fill a valid email address']
+    },
     symptoms: {
         type: String,
         default: ''
@@ -57,7 +64,7 @@ const appointmentSchema = new mongoose.Schema({
     },
     doctor: {
         type: String,
-        default: 'Dr. Sharma'
+        default: 'Dr. Pranjal Patil' // Updated to match your frontend
     },
     notes: {
         type: String,

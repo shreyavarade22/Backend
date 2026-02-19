@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
 
-// IMPORT the controller - make sure the path and filename are CORRECT
-const appointmentController = require('./Appointmentcontroller'); // Note: .js extension not needed
+// IMPORT the controller
+const appointmentController = require('./Appointmentcontroller');
 
 // ==================== APPOINTMENT ROUTES ====================
 
@@ -18,8 +18,11 @@ router.get('/appointments/stats', appointmentController.getAppointmentStats);
 // Get today's appointments
 router.get('/appointments/today', appointmentController.getTodaysAppointments);
 
-// Update appointment status
+// Update appointment status (PATCH for partial update)
 router.patch('/appointments/:id/status', appointmentController.updateAppointmentStatus);
+
+// UPDATE FULL APPOINTMENT - ADD THIS ROUTE
+router.put('/appointments/:id', appointmentController.updateAppointment);
 
 // Delete/cancel appointment
 router.delete('/appointments/:id', appointmentController.deleteAppointment);

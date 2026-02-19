@@ -10,7 +10,7 @@ const createAppointment = async (req, res) => {
         console.log("-".repeat(60));
 
         const {
-            patientName, age, gender, phone, symptoms,
+            patientName, age, gender, phone, email, symptoms, // Added email here
             date, time, status, type, doctor, notes,
             bookingDate, bookingTime
         } = req.body;
@@ -21,6 +21,7 @@ const createAppointment = async (req, res) => {
         if (!age) missingFields.push('age');
         if (!gender) missingFields.push('gender');
         if (!phone) missingFields.push('phone');
+        if (!email) missingFields.push('email'); // Added email validation
         if (!date) missingFields.push('date');
         if (!time) missingFields.push('time');
 
@@ -29,6 +30,15 @@ const createAppointment = async (req, res) => {
                 success: false,
                 message: "Required fields are missing",
                 missingFields
+            });
+        }
+
+        // Validate email format
+        const emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid email format"
             });
         }
 
@@ -42,30 +52,33 @@ const createAppointment = async (req, res) => {
         const appointmentId = `APT-${year}${month}${day}-${random}`;
         // =================================================
 
-        // Create new appointment with appointmentId
+        // Create new appointment with appointmentId and email
         const newAppointment = new AppointmentModel({
-            appointmentId, // ✅ THIS IS THE FIX - you were missing this!
+            appointmentId,
             patientName: patientName.trim(),
             age: parseInt(age),
             gender,
             phone,
+            email: email.toLowerCase().trim(), // Added email
             symptoms: symptoms || '',
             date,
             time,
             status: status || 'Pending',
             type: type || 'Cardiology',
-            doctor: doctor || 'Dr. Sharma',
+            doctor: doctor || 'Dr. Pranjal Patil', // Updated default
             notes: notes || '',
             bookingDate: bookingDate || new Date().toISOString().split('T')[0],
             bookingTime: bookingTime || new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
         });
 
         console.log("💾 Saving appointment with ID:", appointmentId);
+        console.log("📧 Patient Email:", email);
         const savedAppointment = await newAppointment.save();
 
         console.log("✅ APPOINTMENT BOOKED SUCCESSFULLY!");
         console.log("Appointment ID:", savedAppointment.appointmentId);
         console.log("Patient:", savedAppointment.patientName);
+        console.log("Email:", savedAppointment.email);
         console.log("=".repeat(60));
 
         res.status(201).json({
@@ -78,6 +91,7 @@ const createAppointment = async (req, res) => {
                 age: savedAppointment.age,
                 gender: savedAppointment.gender,
                 phone: savedAppointment.phone,
+                email: savedAppointment.email, // Added email to response
                 symptoms: savedAppointment.symptoms,
                 date: savedAppointment.date,
                 time: savedAppointment.time,
@@ -277,11 +291,69 @@ const deleteAppointment = async (req, res) => {
     }
 };
 
+// ==================== UPDATE FULL APPOINTMENT (ADD THIS FOR EDIT FUNCTIONALITY) ====================
+const updateAppointment = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const updateData = req.body;
+
+        // Validate email if provided
+        if (updateData.email) {
+            const emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
+            if (!emailRegex.test(updateData.email)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Invalid email format"
+                });
+            }
+            updateData.email = updateData.email.toLowerCase().trim();
+        }
+
+        const appointment = await AppointmentModel.findByIdAndUpdate(
+            id,
+            updateData,
+            { new: true, runValidators: true }
+        );
+
+        if (!appointment) {
+            return res.status(404).json({
+                success: false,
+                message: "Appointment not found"
+            });
+        }
+
+        console.log("✅ Appointment updated successfully:", appointment.appointmentId);
+        res.status(200).json({
+            success: true,
+            message: "Appointment updated successfully",
+            appointment
+        });
+
+    } catch (error) {
+        console.error("❌ Error updating appointment:", error);
+        
+        if (error.name === 'ValidationError') {
+            const messages = Object.values(error.errors).map(err => err.message);
+            return res.status(400).json({
+                success: false,
+                message: messages.join(', ')
+            });
+        }
+
+        res.status(500).json({
+            success: false,
+            message: "Failed to update appointment",
+            error: error.message
+        });
+    }
+};
+
 module.exports = {
     createAppointment,
     getAllAppointments,
     getTodaysAppointments,
     getAppointmentStats,
     updateAppointmentStatus,
+    updateAppointment, // Added this for full updates
     deleteAppointment
 };
