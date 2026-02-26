@@ -16,30 +16,39 @@ const appointmentSchema = new mongoose.Schema({
     },
     patientName: {
         type: String,
-        required: true,
+        required: [true, "Patient name is required"],
         trim: true
     },
     age: {
         type: Number,
-        required: true,
-        min: 1,
-        max: 120
+        required: [true, "Age is required"],
+        min: [1, "Age must be at least 1"],
+        max: [120, "Age cannot exceed 120"]
     },
     gender: {
         type: String,
-        required: true,
+        required: [true, "Gender is required"],
         enum: ['Male', 'Female', 'Other']
     },
     phone: {
         type: String,
-        required: true
+        required: [true, "Phone number is required"],
+        validate: {
+            validator: function(v) {
+                return /^[0-9]{10}$/.test(v);
+            },
+            message: "Phone number must be 10 digits"
+        }
     },
-    email: {
+    email: {  // ✅ ADDED - Missing field!
         type: String,
-        required: true,
-        trim: true,
-        lowercase: true,
-        match: [/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/, 'Please fill a valid email address']
+        required: [true, "Email is required"],
+        validate: {
+            validator: function(v) {
+                return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+            },
+            message: "Please enter a valid email"
+        }
     },
     symptoms: {
         type: String,
@@ -47,11 +56,11 @@ const appointmentSchema = new mongoose.Schema({
     },
     date: {
         type: String,
-        required: true
+        required: [true, "Appointment date is required"]
     },
     time: {
         type: String,
-        required: true
+        required: [true, "Appointment time is required"]
     },
     status: {
         type: String,
@@ -64,7 +73,7 @@ const appointmentSchema = new mongoose.Schema({
     },
     doctor: {
         type: String,
-        default: 'Dr. Pranjal Patil' // Updated to match your frontend
+        default: 'Dr. Pranjal Patil'
     },
     notes: {
         type: String,
@@ -82,5 +91,8 @@ const appointmentSchema = new mongoose.Schema({
     timestamps: true,
     collection: 'appointments'
 });
+
+// ✅ ADDED: Compound index to prevent duplicate date+time
+appointmentSchema.index({ date: 1, time: 1 }, { unique: true });
 
 module.exports = mongoose.model('Appointment', appointmentSchema);

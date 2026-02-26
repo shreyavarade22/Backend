@@ -1,3 +1,7 @@
+// ❌ Wrong path (models folder mein nahi hai)
+// const AppointmentModel = require('../models/Appointmentmodel');
+
+// ✅ Correct path (same folder mein hai)
 const AppointmentModel = require('./Appointmentmodel');
 
 // ==================== CREATE APPOINTMENT ====================
@@ -10,7 +14,7 @@ const createAppointment = async (req, res) => {
         console.log("-".repeat(60));
 
         const {
-            patientName, age, gender, phone, email, symptoms, // Added email here
+            patientName, age, gender, phone, email, symptoms,
             date, time, status, type, doctor, notes,
             bookingDate, bookingTime
         } = req.body;
@@ -21,7 +25,7 @@ const createAppointment = async (req, res) => {
         if (!age) missingFields.push('age');
         if (!gender) missingFields.push('gender');
         if (!phone) missingFields.push('phone');
-        if (!email) missingFields.push('email'); // Added email validation
+        if (!email) missingFields.push('email');
         if (!date) missingFields.push('date');
         if (!time) missingFields.push('time');
 
@@ -33,86 +37,68 @@ const createAppointment = async (req, res) => {
             });
         }
 
-        // Validate email format
-        const emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
-        if (!emailRegex.test(email)) {
-            return res.status(400).json({
+        // Check for duplicate appointment
+        const existingAppointment = await AppointmentModel.findOne({
+            date: date,
+            time: time
+        });
+
+        if (existingAppointment) {
+            return res.status(409).json({
                 success: false,
-                message: "Invalid email format"
+                message: "This time slot is already booked. Please choose another time."
             });
         }
 
-        // ============ GENERATE APPOINTMENT ID ============
-        // Format: APT-YYYYMMDD-XXXX (e.g., APT-20240213-1234)
+        // Generate appointment ID
         const now = new Date();
         const year = now.getFullYear();
         const month = String(now.getMonth() + 1).padStart(2, '0');
         const day = String(now.getDate()).padStart(2, '0');
         const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
         const appointmentId = `APT-${year}${month}${day}-${random}`;
-        // =================================================
 
-        // Create new appointment with appointmentId and email
+        // Create new appointment
         const newAppointment = new AppointmentModel({
             appointmentId,
             patientName: patientName.trim(),
             age: parseInt(age),
             gender,
             phone,
-            email: email.toLowerCase().trim(), // Added email
+            email,
             symptoms: symptoms || '',
             date,
             time,
             status: status || 'Pending',
             type: type || 'Cardiology',
-            doctor: doctor || 'Dr. Pranjal Patil', // Updated default
+            doctor: doctor || 'Dr. Pranjal Patil',
             notes: notes || '',
             bookingDate: bookingDate || new Date().toISOString().split('T')[0],
             bookingTime: bookingTime || new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
         });
 
         console.log("💾 Saving appointment with ID:", appointmentId);
-        console.log("📧 Patient Email:", email);
         const savedAppointment = await newAppointment.save();
 
         console.log("✅ APPOINTMENT BOOKED SUCCESSFULLY!");
         console.log("Appointment ID:", savedAppointment.appointmentId);
-        console.log("Patient:", savedAppointment.patientName);
-        console.log("Email:", savedAppointment.email);
-        console.log("=".repeat(60));
 
         res.status(201).json({
             success: true,
             message: "Appointment booked successfully",
-            appointment: {
-                id: savedAppointment._id,
-                appointmentId: savedAppointment.appointmentId,
-                patientName: savedAppointment.patientName,
-                age: savedAppointment.age,
-                gender: savedAppointment.gender,
-                phone: savedAppointment.phone,
-                email: savedAppointment.email, // Added email to response
-                symptoms: savedAppointment.symptoms,
-                date: savedAppointment.date,
-                time: savedAppointment.time,
-                doctor: savedAppointment.doctor,
-                status: savedAppointment.status,
-                bookingDate: savedAppointment.bookingDate,
-                bookingTime: savedAppointment.bookingTime
-            }
+            appointment: savedAppointment
         });
 
     } catch (error) {
-        console.error("❌ ERROR BOOKING APPOINTMENT:");
-        console.error(error);
-
+        console.error("❌ ERROR:", error);
+        
         if (error.code === 11000) {
             return res.status(409).json({
                 success: false,
-                message: "Duplicate appointment ID. Please try again."
+                message: "This time slot is already booked!"
             });
         }
-
+        
         if (error.name === 'ValidationError') {
             const messages = Object.values(error.errors).map(err => err.message);
             return res.status(400).json({
@@ -131,21 +117,17 @@ const createAppointment = async (req, res) => {
 // ==================== GET ALL APPOINTMENTS ====================
 const getAllAppointments = async (req, res) => {
     try {
-        const appointments = await AppointmentModel.find()
-            .sort({ createdAt: -1 });
-
+        const appointments = await AppointmentModel.find().sort({ createdAt: -1 });
         res.status(200).json({
             success: true,
             count: appointments.length,
             appointments
         });
-
     } catch (error) {
-        console.error("❌ Error fetching appointments:", error);
+        console.error("❌ Error:", error);
         res.status(500).json({
             success: false,
-            message: "Failed to fetch appointments",
-            error: error.message
+            message: "Failed to fetch appointments"
         });
     }
 };
@@ -154,23 +136,19 @@ const getAllAppointments = async (req, res) => {
 const getTodaysAppointments = async (req, res) => {
     try {
         const today = new Date().toISOString().split('T')[0];
+        const appointments = await AppointmentModel.find({ date: today }).sort({ time: 1 });
         
-        const appointments = await AppointmentModel.find({ date: today })
-            .sort({ time: 1 });
-
         res.status(200).json({
             success: true,
             date: today,
             count: appointments.length,
             appointments
         });
-
     } catch (error) {
-        console.error("❌ Error fetching today's appointments:", error);
+        console.error("❌ Error:", error);
         res.status(500).json({
             success: false,
-            message: "Failed to fetch today's appointments",
-            error: error.message
+            message: "Failed to fetch today's appointments"
         });
     }
 };
@@ -181,12 +159,12 @@ const getAppointmentStats = async (req, res) => {
         const today = new Date().toISOString().split('T')[0];
         
         const [
-            totalAppointments,
-            todaysAppointments,
-            pendingAppointments,
-            confirmedAppointments,
-            completedAppointments,
-            cancelledAppointments
+            total,
+            today_count,
+            pending,
+            confirmed,
+            completed,
+            cancelled
         ] = await Promise.all([
             AppointmentModel.countDocuments(),
             AppointmentModel.countDocuments({ date: today }),
@@ -199,21 +177,19 @@ const getAppointmentStats = async (req, res) => {
         res.status(200).json({
             success: true,
             stats: {
-                total: totalAppointments,
-                today: todaysAppointments,
-                pending: pendingAppointments,
-                confirmed: confirmedAppointments,
-                completed: completedAppointments,
-                cancelled: cancelledAppointments
+                total,
+                today: today_count,
+                pending,
+                confirmed,
+                completed,
+                cancelled
             }
         });
-
     } catch (error) {
-        console.error("❌ Error fetching appointment statistics:", error);
+        console.error("❌ Error:", error);
         res.status(500).json({
             success: false,
-            message: "Failed to fetch appointment statistics",
-            error: error.message
+            message: "Failed to fetch statistics"
         });
     }
 };
@@ -229,14 +205,14 @@ const updateAppointmentStatus = async (req, res) => {
         if (!validStatuses.includes(status)) {
             return res.status(400).json({
                 success: false,
-                message: "Invalid status value"
+                message: "Invalid status"
             });
         }
 
         const appointment = await AppointmentModel.findByIdAndUpdate(
             id,
             { status },
-            { new: true, runValidators: true }
+            { new: true }
         );
 
         if (!appointment) {
@@ -248,16 +224,14 @@ const updateAppointmentStatus = async (req, res) => {
 
         res.status(200).json({
             success: true,
-            message: `Appointment status updated to ${status}`,
+            message: `Status updated to ${status}`,
             appointment
         });
-
     } catch (error) {
-        console.error("❌ Error updating appointment status:", error);
+        console.error("❌ Error:", error);
         res.status(500).json({
             success: false,
-            message: "Failed to update appointment status",
-            error: error.message
+            message: "Failed to update status"
         });
     }
 };
@@ -266,7 +240,6 @@ const updateAppointmentStatus = async (req, res) => {
 const deleteAppointment = async (req, res) => {
     try {
         const { id } = req.params;
-
         const appointment = await AppointmentModel.findByIdAndDelete(id);
 
         if (!appointment) {
@@ -280,70 +253,11 @@ const deleteAppointment = async (req, res) => {
             success: true,
             message: "Appointment cancelled successfully"
         });
-
     } catch (error) {
-        console.error("❌ Error deleting appointment:", error);
+        console.error("❌ Error:", error);
         res.status(500).json({
             success: false,
-            message: "Failed to delete appointment",
-            error: error.message
-        });
-    }
-};
-
-// ==================== UPDATE FULL APPOINTMENT (ADD THIS FOR EDIT FUNCTIONALITY) ====================
-const updateAppointment = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const updateData = req.body;
-
-        // Validate email if provided
-        if (updateData.email) {
-            const emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
-            if (!emailRegex.test(updateData.email)) {
-                return res.status(400).json({
-                    success: false,
-                    message: "Invalid email format"
-                });
-            }
-            updateData.email = updateData.email.toLowerCase().trim();
-        }
-
-        const appointment = await AppointmentModel.findByIdAndUpdate(
-            id,
-            updateData,
-            { new: true, runValidators: true }
-        );
-
-        if (!appointment) {
-            return res.status(404).json({
-                success: false,
-                message: "Appointment not found"
-            });
-        }
-
-        console.log("✅ Appointment updated successfully:", appointment.appointmentId);
-        res.status(200).json({
-            success: true,
-            message: "Appointment updated successfully",
-            appointment
-        });
-
-    } catch (error) {
-        console.error("❌ Error updating appointment:", error);
-        
-        if (error.name === 'ValidationError') {
-            const messages = Object.values(error.errors).map(err => err.message);
-            return res.status(400).json({
-                success: false,
-                message: messages.join(', ')
-            });
-        }
-
-        res.status(500).json({
-            success: false,
-            message: "Failed to update appointment",
-            error: error.message
+            message: "Failed to delete appointment"
         });
     }
 };
@@ -354,6 +268,5 @@ module.exports = {
     getTodaysAppointments,
     getAppointmentStats,
     updateAppointmentStatus,
-    updateAppointment, // Added this for full updates
     deleteAppointment
 };

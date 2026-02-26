@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const patientSchema = new mongoose.Schema({
+const admissionSchema = new mongoose.Schema({
     id: {
         type: String,
         required: true,
@@ -11,6 +11,10 @@ const patientSchema = new mongoose.Schema({
         required: true,
         trim: true
     },
+    patientId: {
+        type: String,
+        default: ''
+    },
     age: {
         type: String,
         required: true
@@ -20,39 +24,13 @@ const patientSchema = new mongoose.Schema({
         enum: ['Male', 'Female', 'Other'],
         default: 'Male'
     },
-    dob: {
-        type: String,
-        required: true
-    },
-    email: {
-        type: String,
-        required: true,
-        trim: true,
-        lowercase: true
-    },
-    phone: {
-        type: String,
-        required: true
-    },
-    alternatePhone: {
-        type: String,
-        default: ''
-    },
     address: {
         type: String,
         default: ''
     },
-    symptoms: [{
-        type: String
-    }],
-    bloodGroup: {
+    phone: {
         type: String,
-        enum: ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-', ''],
-        default: ''
-    },
-    profession: {
-        type: String,
-        default: ''
+        required: true
     },
     nameOfKin: {
         type: String,
@@ -62,24 +40,53 @@ const patientSchema = new mongoose.Schema({
         type: String,
         default: ''
     },
-    registeredDate: {
+    bedNo: {
         type: String,
         required: true
     },
-    registeredTime: {
+    fromDate: {
+        type: String,
+        required: true
+    },
+    toDate: {
+        type: String,
+        default: ''
+    },
+    symptoms: [{
+        type: String
+    }],
+    admittingDoctor: {
+        type: String,
+        default: ''
+    },
+    admissionDate: {
+        type: String,
+        required: true
+    },
+    admissionTime: {
         type: String,
         required: true
     },
     status: {
         type: String,
-        enum: ['Active', 'Inactive'],
-        default: 'Active'
+        enum: ['Admitted', 'Discharged'],
+        default: 'Admitted'
+    },
+    dischargeDate: {
+        type: String,
+        default: ''
+    },
+    dischargeNotes: {
+        type: String,
+        default: ''
+    },
+    dischargeType: {
+        type: String,
+        enum: ['', 'Recovered', 'Referred', 'LAMA', 'Expired'],
+        default: ''
     }
 }, {
     timestamps: true
 });
 
-// Create indexes for better search performance
-patientSchema.index({ patientName: 'text', phone: 'text', email: 'text' });
-
-module.exports = mongoose.model('Patient', patientSchema);
+module.exports = mongoose.model('PatientAdmission', admissionSchema);
